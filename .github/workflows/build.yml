@@ -13,6 +13,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Sync version from tag
+        shell: bash
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          node -e "const fs=require('fs'),f='src-tauri/tauri.conf.json',j=JSON.parse(fs.readFileSync(f,'utf8'));j.version='$V';fs.writeFileSync(f,JSON.stringify(j,null,2))"
       - uses: actions/setup-node@v4
         with:
           node-version: 20
