@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "tauri": "tauri",
     "icon": "tauri icon app-icon.png",
     "app:dev": "tauri dev",
     "app:build": "tauri build"
