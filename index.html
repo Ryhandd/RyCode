@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RyCode</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="side">
+      <header><b>RY<span>CODE</span></b><button id="open" title="Buka folder (Ctrl+O)">Open</button></header>
+      <div id="tree"></div>
+    </aside>
+    <main>
+      <div id="tabs"></div>
+      <div id="editor"></div>
+      <section id="term">
+        <div id="out"></div>
+        <div class="in"><i>$</i><input id="cmd" spellcheck="false" autocomplete="off" aria-label="Terminal"></div>
+      </section>
+    </main>
+  </div>
+  <div id="qo" hidden><input id="qi" placeholder="Cari file…" aria-label="Cari file"><ul id="ql"></ul></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
