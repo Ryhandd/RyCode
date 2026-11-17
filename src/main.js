@@ -49,30 +49,57 @@ const view = new EditorView({ parent: $("#editor"), state: blank() });
 
 // ---------- terminal ----------
 const out = $("#out"), hist = [];
-let hi = 0;
+let hi = 0, busy = false, last = null;
+const setBusy = (b) => { busy = b; document.querySelector(".in i").textContent = b ? ">" : "$"; };
+function trim() {
+  while (out.childElementCount > 2000) out.firstChild.remove();
+  out.scrollTop = out.scrollHeight;
+}
 function log(text, kind = "") {
+  last = null;
   const d = document.createElement("div");
   if (kind) d.className = kind;
   d.textContent = text;
   out.append(d);
-  while (out.childElementCount > 2000) out.firstChild.remove();
-  out.scrollTop = out.scrollHeight;
+  trim();
+}
+// Output mentah: prompt tanpa newline tetap tampil, \r menimpa baris, ANSI dibuang.
+function put(text, kind = "") {
+  const clean = text.replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, "").replace(/\r\n/g, "\n");
+  for (const p of clean.split(/(\n|\r)/)) {
+    if (p === "\r") { if (last) last.textContent = ""; continue; }
+    if (p !== "\n" && !p) continue;
+    if (!last) {
+      last = document.createElement("div");
+      if (kind) last.className = kind;
+      out.append(last);
+    }
+    if (p === "\n") last = null; else last.textContent += p;
+  }
+  trim();
 }
 listen("term", ({ payload: { kind, data } }) => {
-  if (kind === "exit") log(`[exit ${data}]`, "cmd");
-  else log(data, kind === "err" ? "err" : "");
+  if (kind === "exit") { setBusy(false); log(`[exit ${data}]`, "cmd"); }
+  else put(data, kind === "err" ? "err" : "");
 });
 $("#cmd").onkeydown = async (e) => {
   const i = e.target;
-  if (e.key === "Enter" && i.value.trim()) {
+  if (e.key === "Enter" && (busy || i.value.trim())) {
     const c = i.value;
     i.value = "";
+    if (busy) {
+      put(c + "\n");
+      try { await invoke("send_input", { data: c + "\n" }); } catch (er) { log(String(er), "err"); }
+      return;
+    }
     hist.push(c);
     hi = hist.length;
     if (c.trim() === "clear") return out.replaceChildren();
     log("$ " + c, "cmd");
-    try { await invoke("run_command", { cmd: c, cwd: root }); } catch (er) { log(String(er), "err"); }
-  } else if (e.key === "c" && e.ctrlKey) invoke("kill_command");
+    setBusy(true);
+    try { await invoke("run_command", { cmd: c, cwd: root }); } catch (er) { setBusy(false); log(String(er), "err"); }
+  } else if (e.ctrlKey && e.key === "c") invoke("kill_command");
+  else if (e.ctrlKey && e.key === "d" && busy) invoke("close_input");
   else if (e.key === "ArrowUp" && hi > 0) i.value = hist[--hi];
   else if (e.key === "ArrowDown") i.value = hist[++hi] ?? ((hi = hist.length), "");
 };

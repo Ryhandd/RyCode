@@ -3,9 +3,9 @@
 use serde::Serialize;
 use std::{
     fs,
-    io::{BufRead, BufReader, Read},
+    io::{Read, Write},
     path::PathBuf,
-    process::{Child, Command, Stdio},
+    process::{Child, ChildStdin, Command, Stdio},
     sync::Mutex,
     thread,
     time::Duration,
@@ -29,7 +29,7 @@ struct Term {
 }
 
 #[derive(Default)]
-struct Proc(Mutex<Option<Child>>);
+struct Proc(Mutex<Option<Child>>, Mutex<Option<ChildStdin>>);
 
 #[tauri::command]
 fn read_dir(path: String) -> Result<Vec<Entry>, String> {
@@ -90,10 +90,30 @@ fn search_files(root: String, query: String, limit: usize) -> Vec<String> {
     out
 }
 
-fn pipe<R: Read + Send + 'static>(app: AppHandle, r: R, kind: &'static str) {
+// Baca per chunk (bukan per baris) supaya prompt tanpa newline tetap tampil.
+fn pipe<R: Read + Send + 'static>(app: AppHandle, mut r: R, kind: &'static str) {
     thread::spawn(move || {
-        for line in BufReader::new(r).lines().map_while(Result::ok) {
-            let _ = app.emit("term", Term { kind, data: line });
+        let mut buf = [0u8; 4096];
+        let mut carry: Vec<u8> = Vec::new();
+        while let Ok(n) = r.read(&mut buf) {
+            if n == 0 {
+                break;
+            }
+            carry.extend_from_slice(&buf[..n]);
+            let mut valid = match std::str::from_utf8(&carry) {
+                Ok(s) => s.len(),
+                Err(e) => e.valid_up_to(),
+            };
+            if valid == 0 {
+                if carry.len() < 4 {
+                    continue; // karakter UTF-8 belum lengkap
+                }
+                valid = carry.len();
+            }
+            let rest = carry.split_off(valid);
+            let data = String::from_utf8_lossy(&carry).into_owned();
+            carry = rest;
+            let _ = app.emit("term", Term { kind, data });
         }
     });
 }
@@ -106,7 +126,7 @@ fn run_command(app: AppHandle, state: State<'_, Proc>, cmd: String, cwd: Option<
     }
     let (sh, flag) = if cfg!(windows) { ("cmd", "/C") } else { ("sh", "-c") };
     let mut c = Command::new(sh);
-    c.arg(flag).arg(&cmd).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    c.env("NO_COLOR", "1").arg(flag).arg(&cmd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     if let Some(d) = cwd {
         c.current_dir(d);
     }
@@ -121,6 +141,11 @@ fn run_command(app: AppHandle, state: State<'_, Proc>, cmd: String, cwd: Option<
     }
     if let Some(e) = child.stderr.take() {
         pipe(app.clone(), e, "err");
+    }
+    if let Some(i) = child.stdin.take() {
+        if let Ok(mut g) = state.1.lock() {
+            *g = Some(i);
+        }
     }
     *slot = Some(child);
     drop(slot);
@@ -137,6 +162,10 @@ fn run_command(app: AppHandle, state: State<'_, Proc>, cmd: String, cwd: Option<
         if let Some(code) = code {
             *g = None;
             drop(g);
+            if let Ok(mut s) = st.1.lock() {
+                *s = None; // tutup stdin
+            }
+            thread::sleep(Duration::from_millis(60)); // beri waktu output terakhir
             let _ = app.emit("term", Term { kind: "exit", data: code.to_string() });
             break;
         }
@@ -144,12 +173,39 @@ fn run_command(app: AppHandle, state: State<'_, Proc>, cmd: String, cwd: Option<
     Ok(())
 }
 
+fn kill_tree(c: &mut Child) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let _ = Command::new("taskkill")
+            .args(["/PID", &c.id().to_string(), "/T", "/F"])
+            .creation_flags(0x0800_0000)
+            .status();
+    }
+    let _ = c.kill();
+}
+
 #[tauri::command]
 fn kill_command(state: State<'_, Proc>) -> Result<(), String> {
     if let Some(c) = state.0.lock().map_err(|e| e.to_string())?.as_mut() {
-        c.kill().map_err(|e| e.to_string())?;
+        kill_tree(c);
     }
     Ok(())
+}
+
+#[tauri::command]
+fn send_input(state: State<'_, Proc>, data: String) -> Result<(), String> {
+    let mut g = state.1.lock().map_err(|e| e.to_string())?;
+    let i = g.as_mut().ok_or("Tidak ada proses yang berjalan")?;
+    i.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+    i.flush().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn close_input(state: State<'_, Proc>) {
+    if let Ok(mut g) = state.1.lock() {
+        *g = None;
+    }
 }
 
 fn main() {
@@ -157,7 +213,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Proc::default())
         .invoke_handler(tauri::generate_handler![
-            read_dir, read_file, write_file, search_files, run_command, kill_command
+            read_dir, read_file, write_file, search_files, run_command, kill_command, send_input, close_input
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan RyCode");
