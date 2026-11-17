@@ -3,7 +3,7 @@
 use serde::Serialize;
 use std::{
     fs,
-    io::{Read, Write},
+    io::{ErrorKind, Read, Write},
     path::PathBuf,
     process::{Child, ChildStdin, Command, Stdio},
     sync::Mutex,
@@ -91,6 +91,31 @@ fn search_files(root: String, query: String, limit: usize) -> Vec<String> {
 }
 
 // Baca per chunk (bukan per baris) supaya prompt tanpa newline tetap tampil.
+/// Hapus file/folder secara permanen. Hanya boleh di dalam folder kerja (`root`),
+/// folder kerja itu sendiri tidak bisa dihapus, dan symlink dihapus tanpa diikuti.
+#[tauri::command]
+fn delete_item(root: String, path: String) -> Result<(), String> {
+    let root = fs::canonicalize(&root).map_err(|e| format!("Folder kerja tidak valid: {e}"))?;
+    let target = PathBuf::from(&path);
+    let name = target.file_name().ok_or("Path tidak valid")?;
+    let parent = target.parent().ok_or("Path tidak valid")?;
+    let parent = fs::canonicalize(parent).map_err(|e| format!("Folder induk tidak valid: {e}"))?;
+    if !parent.starts_with(&root) {
+        return Err("Di luar folder kerja, penghapusan ditolak".into());
+    }
+    let item = parent.join(name);
+    let meta = fs::symlink_metadata(&item).map_err(|e| format!("Item tidak ditemukan: {e}"))?;
+    let res = if meta.file_type().is_dir() {
+        fs::remove_dir_all(&item)
+    } else {
+        fs::remove_file(&item).or_else(|_| fs::remove_dir(&item))
+    };
+    res.map_err(|e| match e.kind() {
+        ErrorKind::PermissionDenied => format!("Akses ditolak (file dipakai atau read-only): {e}"),
+        _ => format!("Gagal menghapus: {e}"),
+    })
+}
+
 fn pipe<R: Read + Send + 'static>(app: AppHandle, mut r: R, kind: &'static str) {
     thread::spawn(move || {
         let mut buf = [0u8; 4096];
@@ -213,7 +238,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Proc::default())
         .invoke_handler(tauri::generate_handler![
-            read_dir, read_file, write_file, search_files, run_command, kill_command, send_input, close_input
+            read_dir, read_file, write_file, search_files, run_command, kill_command, send_input, close_input, delete_item
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan RyCode");

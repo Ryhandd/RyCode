@@ -12,15 +12,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cy);outline-off
 .n{padding:1px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
 .n:hover{background:var(--s2)}.n.on{background:var(--s2);color:var(--neon)}
 .d::before{content:"▸ ";color:var(--mu)}.d.o::before{content:"▾ "}.f::before{content:"· ";color:var(--mu)}
-main{display:grid;grid-template-rows:auto 1fr auto;min-width:0;height:100%}
+main{display:grid;grid-template-rows:auto 1fr auto auto auto;min-width:0;height:100%}
 #tabs{display:flex;overflow-x:auto;min-height:30px;background:var(--s1);border-bottom:2px solid var(--bd)}
 .t{padding:4px 14px;border-right:2px solid var(--bd);cursor:pointer;white-space:nowrap;color:var(--mu)}
 .t.on{color:var(--neon);background:var(--bg);box-shadow:inset 0 -3px 0 var(--neon)}
 .t.m::after{content:" ●";color:var(--pink)}
-#editor{position:relative;min-height:0}.cm-editor{position:absolute;inset:0}
-#term{display:flex;flex-direction:column;height:220px;background:var(--s1);border-top:2px solid var(--neon)}
-#term.h{display:none}
-#out{flex:1;overflow:auto;padding:6px 12px;white-space:pre-wrap;word-break:break-all}
+
+#out{flex:1;min-height:0;overflow:auto;padding:6px 12px;white-space:pre-wrap;word-break:break-all}
 #out .err{color:var(--pink)}#out .cmd{color:var(--cy)}
 .in{display:flex;gap:8px;padding:4px 12px;border-top:2px solid var(--bd)}.in i{color:var(--neon);font-style:normal}
 input{flex:1;font:inherit;color:var(--tx);background:none;border:0}
@@ -28,4 +26,32 @@ input{flex:1;font:inherit;color:var(--tx);background:none;border:0}
 #qo input{width:100%;padding:10px 12px;border-bottom:2px solid var(--bd)}
 #ql{list-style:none;padding:0;max-height:300px;overflow:auto}
 #ql li{padding:4px 12px;cursor:pointer}#ql li:hover{background:var(--bd);color:var(--neon)}
+#bar{display:flex;justify-content:space-between;gap:12px;padding:2px 12px;background:var(--s2);border-top:2px solid var(--bd);color:var(--mu);font-size:12px;white-space:nowrap;overflow:hidden}
+#bar button{padding:0 8px;font-size:12px;margin-left:8px}
+#msg.ok{color:var(--neon)}#msg.err{color:var(--pink);overflow:hidden;text-overflow:ellipsis}
+#hp h3{color:var(--neon);letter-spacing:.08em;margin-bottom:6px}#hp h4{color:var(--cy);margin:12px 0 4px}
+#hp .row{display:flex;justify-content:space-between;gap:16px;padding:2px 0;border-bottom:1px solid var(--bd)}
+kbd{font:inherit;color:var(--neon);background:var(--bg);border:2px solid var(--bd);padding:0 6px;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+#editor{position:relative;min-height:0;min-width:0;overflow:hidden}
+.cm-editor{position:absolute;inset:0}
+.cm-editor.cm-focused{outline:none}
+.cm-scroller{overflow:auto!important}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:var(--bd);border:2px solid var(--bg)}
+*::-webkit-scrollbar-thumb:hover{background:var(--neon)}
+*::-webkit-scrollbar-corner{background:transparent}
+#term{display:flex;flex-direction:column;height:var(--term-h,220px);min-height:0;overflow:hidden;background:var(--s1);border-top:2px solid var(--neon)}
+#gutter{position:relative;height:6px;background:var(--bd);cursor:row-resize;touch-action:none}
+#gutter::after{content:"";position:absolute;inset:-4px 0}
+#gutter:hover,#gutter:focus-visible,body.drag #gutter{background:var(--neon);outline:none}
+body.drag{cursor:row-resize;user-select:none}
+.noterm #gutter,.noterm #term{display:none}
+#tree:focus-visible{outline:2px solid var(--cy);outline-offset:-2px}
+#ctx{position:fixed;z-index:10;min-width:130px;background:var(--s2);border:2px solid var(--pink);box-shadow:4px 4px 0 var(--neon)}
+#ctx button{display:block;width:100%;color:var(--pink);background:none;border:0;box-shadow:none;padding:4px 14px;text-align:left;font-weight:400}
+#ctx button:hover{background:var(--bd)}
+#ctx kbd{float:right;margin-left:16px}
+#hp{position:fixed;inset:0;z-index:9;display:flex;justify-content:center;align-items:flex-start;padding-top:6vh;background:rgba(0,0,0,.6)}
+#hp[hidden]{display:none}
+#hpcard{width:min(640px,92vw);max-height:86vh;overflow:auto;padding:14px 18px;background:var(--s2);border:2px solid var(--neon);box-shadow:6px 6px 0 var(--pink);outline:none}
