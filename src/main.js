@@ -115,18 +115,23 @@ $("#cmd").onkeydown = async (e) => {
   else if (e.key === "ArrowDown") i.value = hist[++hi] ?? ((hi = hist.length), "");
 };
 
-// ---------- splitter terminal (drag / dblclick / keyboard) ----------
-const KEY = "rycode.termh", mainEl = $("main"), gutter = $("#gutter");
-let termH = 220;
-try { termH = Number(localStorage.getItem(KEY)) || 220; } catch { /* storage tidak tersedia: pakai default */ }
+// ---------- splitter terminal ----------
+// Ukuran dijaga CSS (clamp pada --term-row). JS hanya menulis --term-h (px) dan menyimpannya.
+const KEY = "rycode.termh", rootEl = document.documentElement;
+const mainEl = $(".main-container"), ws = $(".workspace"), gutter = $("#gutter"), term = $("#term");
+const cssPx = (name, fallback) => parseFloat(getComputedStyle(rootEl).getPropertyValue(name)) || fallback;
 function setTermH(h) {
-  const max = mainEl.clientHeight - 200; // sisakan ruang untuk tab + editor
-  termH = Math.round(Math.max(80, Math.min(h, max)));
-  document.documentElement.style.setProperty("--term-h", termH + "px");
-  gutter.setAttribute("aria-valuenow", String(termH));
+  if (!ws.clientHeight) return;
+  const max = ws.clientHeight - cssPx("--editor-min", 140) - cssPx("--gutter", 6);
+  const v = Math.round(Math.max(cssPx("--term-min", 80), Math.min(h, max)));
+  rootEl.style.setProperty("--term-h", v + "px");
+  gutter.setAttribute("aria-valuenow", String(v));
   view.requestMeasure();
 }
-const persist = () => { try { localStorage.setItem(KEY, String(termH)); } catch { /* abaikan */ } };
+const persist = () => {
+  if (!term.offsetHeight) return;
+  try { localStorage.setItem(KEY, String(term.offsetHeight)); } catch { /* storage tidak tersedia */ }
+};
 gutter.onpointerdown = (e) => {
   if (e.button !== 0) return;
   e.preventDefault();
@@ -134,8 +139,7 @@ gutter.onpointerdown = (e) => {
   document.body.classList.add("drag");
 };
 gutter.onpointermove = (e) => {
-  if (!gutter.hasPointerCapture(e.pointerId)) return;
-  setTermH(mainEl.getBoundingClientRect().bottom - $("#bar").offsetHeight - e.clientY);
+  if (gutter.hasPointerCapture(e.pointerId)) setTermH(ws.getBoundingClientRect().bottom - e.clientY);
 };
 const endDrag = (e) => {
   if (gutter.hasPointerCapture(e.pointerId)) gutter.releasePointerCapture(e.pointerId);
@@ -144,15 +148,22 @@ const endDrag = (e) => {
 };
 gutter.onpointerup = endDrag;
 gutter.onpointercancel = endDrag;
-gutter.ondblclick = () => { setTermH(220); persist(); };
+gutter.ondblclick = () => {
+  rootEl.style.removeProperty("--term-h"); // kembali ke default CSS (30%)
+  try { localStorage.removeItem(KEY); } catch { /* abaikan */ }
+  view.requestMeasure();
+};
 gutter.onkeydown = (e) => {
   if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
   e.preventDefault();
-  setTermH(termH + (e.key === "ArrowUp" ? 20 : -20));
+  setTermH(term.offsetHeight + (e.key === "ArrowUp" ? 20 : -20));
   persist();
 };
-addEventListener("resize", () => setTermH(termH));
-setTermH(termH);
+try {
+  const saved = Number(localStorage.getItem(KEY));
+  if (saved > 0) setTermH(saved);
+} catch { /* pakai default CSS */ }
+requestAnimationFrame(() => rootEl.classList.add("ready")); // aktifkan transisi setelah render pertama
 
 // ---------- editor & tabs ----------
 async function mkState(path, doc) {
@@ -355,8 +366,8 @@ $("#hbtn").onclick = help;
 
 // ---------- shortcut global ----------
 function toggleTerm() {
-  const hidden = mainEl.classList.toggle("noterm");
-  if (hidden) view.focus(); else { setTermH(termH); $("#cmd").focus(); }
+  const hidden = mainEl.classList.toggle("h");
+  if (hidden) view.focus(); else $("#cmd").focus();
 }
 // Capture phase + e.code: tetap jalan walau fokus di editor dan apa pun layout keyboardnya.
 addEventListener("keydown", (e) => {

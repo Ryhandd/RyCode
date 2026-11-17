@@ -1,39 +1,71 @@
-:root{--bg:#0a0a0f;--s1:#101017;--s2:#16161f;--bd:#262633;--tx:#d7d7e0;--mu:#7a7a90;--neon:#b8ff2c;--pink:#ff3cac;--cy:#2cf0ff;--mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace}
+/* ===== tokens ===== */
+:root{
+  --bg:#0a0a0f;--s1:#101017;--s2:#16161f;--bd:#262633;--tx:#d7d7e0;--mu:#7a7a90;
+  --neon:#b8ff2c;--pink:#ff3cac;--cy:#2cf0ff;
+  --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --side-w:250px;
+  /* Layout terminal. --term-h default 30% tinggi workspace (JS menimpanya dengan px saat drag).
+     clamp() menjaga terminal >= --term-min dan editor >= --editor-min di tinggi window berapa pun. */
+  --term-h:30%;--term-min:80px;--editor-min:140px;--gutter:6px;--anim:.16s;
+  --term-row:clamp(var(--term-min),var(--term-h),calc(100% - var(--editor-min) - var(--gutter)));
+}
+
+/* ===== reset & root ===== */
 *{box-sizing:border-box;margin:0;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
-html,body{height:100%;background:var(--bg);color:var(--tx);font:13px/1.5 var(--mono);overflow:hidden}
-#app{display:grid;grid-template-columns:250px 1fr;height:100%}
-#side{display:flex;flex-direction:column;min-width:0;background:var(--s1);border-right:2px solid var(--bd)}
-#side header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:2px solid var(--bd)}
-#side b{letter-spacing:.14em}#side b span{color:var(--neon)}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font:13px/1.5 var(--mono)}
 button{font:inherit;font-weight:700;color:var(--bg);background:var(--neon);border:2px solid var(--neon);padding:2px 10px;cursor:pointer;box-shadow:2px 2px 0 var(--pink)}
 button:active{transform:translate(2px,2px);box-shadow:none}
 button:focus-visible,input:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
-#tree{flex:1;overflow:auto;padding:6px 0}
+input{flex:1;font:inherit;color:var(--tx);background:none;border:0}
+kbd{font:inherit;color:var(--neon);background:var(--bg);border:2px solid var(--bd);padding:0 6px;white-space:nowrap}
+body.drag{cursor:row-resize;user-select:none}
+
+/* ===== app shell: [sidebar | main] ===== */
+.app{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);grid-template-rows:minmax(0,1fr);height:100%}
+.sidebar{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--s1);border-right:2px solid var(--bd)}
+.sidebar header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:2px solid var(--bd)}
+.sidebar b{letter-spacing:.14em}.sidebar b span{color:var(--neon)}
+#tree{flex:1;min-height:0;overflow:auto;padding:6px 0}
+#tree:focus-visible{outline:2px solid var(--cy);outline-offset:-2px}
 .n{padding:1px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
-.n:hover{background:var(--s2)}.n.on{background:var(--s2);color:var(--neon)}
+.n:hover,.n.on{background:var(--s2)}.n.on{color:var(--neon)}
 .d::before{content:"▸ ";color:var(--mu)}.d.o::before{content:"▾ "}.f::before{content:"· ";color:var(--mu)}
-main{display:grid;grid-template-rows:auto 1fr auto auto auto;min-width:0;height:100%}
-#tabs{display:flex;overflow-x:auto;min-height:30px;background:var(--s1);border-bottom:2px solid var(--bd)}
-.t{padding:4px 14px;border-right:2px solid var(--bd);cursor:pointer;white-space:nowrap;color:var(--mu)}
+
+/* ===== main-container: grid [tabs auto | workspace 1fr | status auto] =====
+   minmax(0,1fr) (bukan 1fr) mencegah baris tumbuh melebihi viewport. Jumlah anak selalu 3,
+   jadi toggle terminal tidak pernah menggeser auto-placement. */
+.main-container{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;min-width:0;min-height:0}
+.tab-bar{display:flex;overflow-x:auto;min-height:calc(1.5em + 10px + 2px);background:var(--s1);border-bottom:2px solid var(--bd)}
+.t{padding:5px 14px;border-right:2px solid var(--bd);cursor:pointer;white-space:nowrap;color:var(--mu)}
 .t.on{color:var(--neon);background:var(--bg);box-shadow:inset 0 -3px 0 var(--neon)}
 .t.m::after{content:" ●";color:var(--pink)}
-
-#out{flex:1;min-height:0;overflow:auto;padding:6px 12px;white-space:pre-wrap;word-break:break-all}
-#out .err{color:var(--pink)}#out .cmd{color:var(--cy)}
-.in{display:flex;gap:8px;padding:4px 12px;border-top:2px solid var(--bd)}.in i{color:var(--neon);font-style:normal}
-input{flex:1;font:inherit;color:var(--tx);background:none;border:0}
-#qo{position:fixed;inset:12% 0 auto;margin:auto;width:min(560px,90vw);background:var(--s2);border:2px solid var(--neon);box-shadow:6px 6px 0 var(--pink);z-index:9}
-#qo input{width:100%;padding:10px 12px;border-bottom:2px solid var(--bd)}
-#ql{list-style:none;padding:0;max-height:300px;overflow:auto}
-#ql li{padding:4px 12px;cursor:pointer}#ql li:hover{background:var(--bd);color:var(--neon)}
-#bar{display:flex;justify-content:space-between;gap:12px;padding:2px 12px;background:var(--s2);border-top:2px solid var(--bd);color:var(--mu);font-size:12px;white-space:nowrap;overflow:hidden}
-#bar button{padding:0 8px;font-size:12px;margin-left:8px}
+.status-bar{display:flex;justify-content:space-between;gap:12px;padding:2px 12px;background:var(--s2);border-top:2px solid var(--bd);color:var(--mu);font-size:12px;white-space:nowrap;overflow:hidden}
+.status-bar button{padding:0 8px;font-size:12px;margin-left:8px}
 #msg.ok{color:var(--neon)}#msg.err{color:var(--pink);overflow:hidden;text-overflow:ellipsis}
-#hp h3{color:var(--neon);letter-spacing:.08em;margin-bottom:6px}#hp h4{color:var(--cy);margin:12px 0 4px}
-#hp .row{display:flex;justify-content:space-between;gap:16px;padding:2px 0;border-bottom:1px solid var(--bd)}
-kbd{font:inherit;color:var(--neon);background:var(--bg);border:2px solid var(--bd);padding:0 6px;white-space:nowrap}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-#editor{position:relative;min-height:0;min-width:0;overflow:hidden}
+
+/* ===== workspace: grid [editor 1fr | gutter | terminal] ===== */
+.workspace{
+  display:grid;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) var(--gutter) var(--term-row);
+  min-width:0;min-height:0;overflow:hidden;
+  transition:grid-template-rows var(--anim) ease;
+}
+/* Toggle: kelas .h pada .main-container hanya mengubah ukuran track (jumlah track tetap 3, jadi bisa dianimasikan). */
+.main-container.h .workspace{grid-template-rows:minmax(0,1fr) 0px 0px}
+html:not(.ready) .workspace,body.drag .workspace{transition:none}
+
+.editor-area{grid-row:1;position:relative;min-width:0;min-height:0;overflow:hidden}
+.gutter{grid-row:2;position:relative;background:var(--bd);cursor:row-resize;touch-action:none;transition:visibility 0s}
+.gutter::after{content:"";position:absolute;inset:-4px 0}
+.gutter:hover,.gutter:focus-visible,body.drag .gutter{background:var(--neon);outline:none}
+.terminal-panel{grid-row:3;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:var(--s1);box-shadow:inset 0 2px 0 var(--neon);transition:visibility 0s}
+.main-container.h .gutter,.main-container.h .terminal-panel{visibility:hidden;pointer-events:none;transition:visibility 0s linear var(--anim)}
+
+.term-out{flex:1;min-height:0;overflow:auto;padding:6px 12px;white-space:pre-wrap;word-break:break-all}
+.term-out .err{color:var(--pink)}.term-out .cmd{color:var(--cy)}
+.in{display:flex;gap:8px;padding:4px 12px;border-top:2px solid var(--bd)}.in i{color:var(--neon);font-style:normal}
+
+/* ===== CodeMirror ===== */
 .cm-editor{position:absolute;inset:0}
 .cm-editor.cm-focused{outline:none}
 .cm-scroller{overflow:auto!important}
@@ -41,17 +73,20 @@ kbd{font:inherit;color:var(--neon);background:var(--bg);border:2px solid var(--b
 *::-webkit-scrollbar-thumb{background:var(--bd);border:2px solid var(--bg)}
 *::-webkit-scrollbar-thumb:hover{background:var(--neon)}
 *::-webkit-scrollbar-corner{background:transparent}
-#term{display:flex;flex-direction:column;height:var(--term-h,220px);min-height:0;overflow:hidden;background:var(--s1);border-top:2px solid var(--neon)}
-#gutter{position:relative;height:6px;background:var(--bd);cursor:row-resize;touch-action:none}
-#gutter::after{content:"";position:absolute;inset:-4px 0}
-#gutter:hover,#gutter:focus-visible,body.drag #gutter{background:var(--neon);outline:none}
-body.drag{cursor:row-resize;user-select:none}
-.noterm #gutter,.noterm #term{display:none}
-#tree:focus-visible{outline:2px solid var(--cy);outline-offset:-2px}
+
+/* ===== overlay: quick open, cheat sheet, context menu ===== */
+#qo{position:fixed;inset:12% 0 auto;margin:auto;width:min(560px,90vw);background:var(--s2);border:2px solid var(--neon);box-shadow:6px 6px 0 var(--pink);z-index:9}
+#qo input{width:100%;padding:10px 12px;border-bottom:2px solid var(--bd)}
+#ql{list-style:none;padding:0;max-height:300px;overflow:auto}
+#ql li{padding:4px 12px;cursor:pointer}#ql li:hover{background:var(--bd);color:var(--neon)}
+#hp{position:fixed;inset:0;z-index:9;display:flex;justify-content:center;align-items:flex-start;padding-top:6vh;background:rgba(0,0,0,.6)}
+#hp[hidden]{display:none}
+#hpcard{width:min(640px,92vw);max-height:86vh;overflow:auto;padding:14px 18px;background:var(--s2);border:2px solid var(--neon);box-shadow:6px 6px 0 var(--pink);outline:none}
+#hp h3{color:var(--neon);letter-spacing:.08em;margin-bottom:6px}#hp h4{color:var(--cy);margin:12px 0 4px}
+#hp .row{display:flex;justify-content:space-between;gap:16px;padding:2px 0;border-bottom:1px solid var(--bd)}
 #ctx{position:fixed;z-index:10;min-width:130px;background:var(--s2);border:2px solid var(--pink);box-shadow:4px 4px 0 var(--neon)}
 #ctx button{display:block;width:100%;color:var(--pink);background:none;border:0;box-shadow:none;padding:4px 14px;text-align:left;font-weight:400}
 #ctx button:hover{background:var(--bd)}
 #ctx kbd{float:right;margin-left:16px}
-#hp{position:fixed;inset:0;z-index:9;display:flex;justify-content:center;align-items:flex-start;padding-top:6vh;background:rgba(0,0,0,.6)}
-#hp[hidden]{display:none}
-#hpcard{width:min(640px,92vw);max-height:86vh;overflow:auto;padding:14px 18px;background:var(--s2);border:2px solid var(--neon);box-shadow:6px 6px 0 var(--pink);outline:none}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

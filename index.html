@@ -7,22 +7,30 @@
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
-  <div id="app">
-    <aside id="side">
+  <div id="app" class="app">
+    <aside id="side" class="sidebar">
       <header><b>RY<span>CODE</span></b><button id="open" title="Buka folder (Ctrl+O)">Open</button></header>
       <div id="tree" tabindex="0" aria-label="File explorer"></div>
     </aside>
-    <main>
-      <div id="tabs"></div>
-      <div id="editor"></div>
-      <div id="gutter" role="separator" aria-orientation="horizontal" aria-label="Ubah tinggi terminal" aria-valuemin="80" tabindex="0" title="Drag untuk resize · klik 2x untuk reset"></div>
-      <section id="term">
-        <div id="out"></div>
-        <div class="in"><i>$</i><input id="cmd" spellcheck="false" autocomplete="off" aria-label="Terminal"></div>
-      </section>
-      <footer id="bar"><span id="msg"></span><span id="hint">Ctrl+S simpan · Ctrl+P cari · Ctrl+O folder · Ctrl+` terminal <button id="hbtn" title="Daftar shortcut (F1)">F1 Shortcuts</button></span></footer>
+
+    <!-- main-container: grid 3 baris tetap [tabs | workspace | status bar]; tidak ada elemen yang dihapus/ditambah saat toggle -->
+    <main class="main-container">
+      <div id="tabs" class="tab-bar"></div>
+
+      <!-- workspace: grid 3 baris [editor 1fr | gutter | terminal]; setiap anak ditempatkan eksplisit -->
+      <div class="workspace">
+        <div id="editor" class="editor-area"></div>
+        <div id="gutter" class="gutter" role="separator" aria-orientation="horizontal" aria-label="Ubah tinggi terminal" aria-valuemin="80" tabindex="0" title="Drag untuk resize · klik 2x untuk reset"></div>
+        <section id="term" class="terminal-panel" aria-label="Terminal">
+          <div id="out" class="term-out"></div>
+          <div class="in"><i>$</i><input id="cmd" spellcheck="false" autocomplete="off" aria-label="Terminal"></div>
+        </section>
+      </div>
+
+      <footer id="bar" class="status-bar"><span id="msg"></span><span id="hint">Ctrl+S simpan · Ctrl+P cari · Ctrl+O folder · Ctrl+` terminal <button id="hbtn" title="Daftar shortcut (F1)">F1 Shortcuts</button></span></footer>
     </main>
   </div>
+
   <div id="qo" hidden><input id="qi" placeholder="Cari file…" aria-label="Cari file"><ul id="ql"></ul></div>
   <div id="hp" hidden role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div id="hpcard" tabindex="-1"></div></div>
   <div id="ctx" hidden><button id="ctxdel">Hapus <kbd>Del</kbd></button></div>
